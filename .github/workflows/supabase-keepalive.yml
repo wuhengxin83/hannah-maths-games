@@ -1,0 +1,27 @@
+name: Supabase Keepalive
+
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read keepalive probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          SUPABASE_URL=$(grep -o "SUPABASE_URL='[^']*'" progress.js | cut -d"'" -f2)
+          SUPABASE_KEY=$(grep -o "SUPABASE_KEY='[^']*'" progress.js | cut -d"'" -f2)
+          response=$(curl --fail --silent --show-error \
+            "$SUPABASE_URL/rest/v1/keepalive_probe?select=id,label&id=eq.1" \
+            -H "apikey: $SUPABASE_KEY")
+          echo "$response"
+          echo "$response" | grep -q 'hannah-maths-games'
