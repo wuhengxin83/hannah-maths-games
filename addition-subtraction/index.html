@@ -19,7 +19,7 @@
   #workCanvas{display:block;width:100%;height:360px;background:
     linear-gradient(#edf0f7 1px,transparent 1px),
     linear-gradient(90deg,#edf0f7 1px,transparent 1px);
-    background-size:28px 28px;touch-action:pan-y pinch-zoom;cursor:crosshair}
+    background-size:28px 28px;touch-action:none;cursor:crosshair}
   .mini-tip{font-size:.87rem;color:var(--muted)}
   .worked-example{margin-top:10px;text-align:left;background:#fff;border-radius:12px;padding:12px 14px;color:#25324a;font-weight:500;line-height:1.5}
   .worked-example ol{margin:8px 0 0;padding-left:22px}
@@ -240,6 +240,7 @@ function finish(){
 /* Stylus / pointer drawing canvas */
 const canvas=$('workCanvas'),ctx=canvas.getContext('2d');
 let drawing=false,last=null,tool='pen',activePointerId=null;
+let fingerScrollId=null,fingerLastY=0;
 function resizeCanvas(){
   const rect=canvas.getBoundingClientRect(),ratio=Math.max(1,window.devicePixelRatio||1);
   const snapshot=document.createElement('canvas');
@@ -252,19 +253,36 @@ function resizeCanvas(){
 }
 function pos(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
 function startDraw(e){
+  if(e.pointerType==='touch'){
+    if(activePointerId===null&&fingerScrollId===null){
+      fingerScrollId=e.pointerId;fingerLastY=e.clientY;
+    }
+    return;
+  }
   if(e.pointerType!=='pen'||activePointerId!==null)return;
+  fingerScrollId=null;
   activePointerId=e.pointerId;drawing=true;last=pos(e);
   canvas.setPointerCapture?.(e.pointerId);e.preventDefault();
 }
 function draw(e){
+  if(e.pointerType==='touch'){
+    if(e.pointerId!==fingerScrollId||activePointerId!==null)return;
+    window.scrollBy(0,fingerLastY-e.clientY);
+    fingerLastY=e.clientY;
+    e.preventDefault();
+    return;
+  }
   if(!drawing||e.pointerType!=='pen'||e.pointerId!==activePointerId)return;
   e.preventDefault();
-  const p=pos(e);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);
+  const points=e.getCoalescedEvents?.()||[e];
   if(tool==='eraser'){ctx.globalCompositeOperation='destination-out';ctx.lineWidth=24}
   else{ctx.globalCompositeOperation='source-over';ctx.strokeStyle='#25324a';ctx.lineWidth=3}
-  ctx.stroke();ctx.globalCompositeOperation='source-over';last=p;
+  ctx.beginPath();ctx.moveTo(last.x,last.y);
+  for(const point of points){const p=pos(point);ctx.lineTo(p.x,p.y);last=p}
+  ctx.stroke();ctx.globalCompositeOperation='source-over';
 }
 function stopDraw(e){
+  if(e.pointerId===fingerScrollId){fingerScrollId=null;return}
   if(e.pointerId!==activePointerId)return;
   drawing=false;last=null;activePointerId=null;
   try{canvas.releasePointerCapture?.(e.pointerId)}catch(_){}
