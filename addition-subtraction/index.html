@@ -7,10 +7,6 @@
 <link rel="stylesheet" href="../styles.css">
 <script src="../progress.js"></script>
 <style>
-  .skill-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-  .skill-card{border:2px solid #eceaf8;background:#faf9ff;border-radius:16px;padding:14px;text-align:left;cursor:pointer;min-height:95px}
-  .skill-card.active{border-color:var(--purple);background:#efedff}
-  .skill-card b{display:block;font-size:1.05rem;margin-bottom:5px}
   .quiz-layout{display:grid;grid-template-columns:minmax(260px,.82fr) minmax(340px,1.18fr);gap:16px;align-items:start}
   .question-card{background:#faf9ff;border-radius:20px;padding:18px;position:sticky;top:12px}
   .care-strip{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:8px 0 16px}
@@ -25,11 +21,13 @@
     linear-gradient(90deg,#edf0f7 1px,transparent 1px);
     background-size:28px 28px;touch-action:none;cursor:crosshair}
   .mini-tip{font-size:.87rem;color:var(--muted)}
+  .worked-example{margin-top:10px;text-align:left;background:#fff;border-radius:12px;padding:12px 14px;color:#25324a;font-weight:500;line-height:1.5}
+  .worked-example ol{margin:8px 0 0;padding-left:22px}
+  .worked-example li{margin:5px 0}
   .review{margin-top:12px;background:#fff8dc;color:#6f5600;border-radius:14px;padding:10px 12px;text-align:center;font-weight:750}
   .scoreline{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:8px 0}
   .scorechip{background:#f8f7ff;border-radius:999px;padding:7px 11px;font-weight:800}
   @media(max-width:760px){
-    .skill-grid{grid-template-columns:1fr}
     .quiz-layout{grid-template-columns:1fr}
     .question-card{position:static}
     #workCanvas{height:320px}
@@ -41,30 +39,15 @@
 <header>
   <div class="brand">
     <h1>✏️ Addition & Subtraction Lab</h1>
-    <p>Slow down, show your working, and catch careless mistakes.</p>
+    <p>Ten questions. Use your stylus, enter your answer, and learn from any mistakes.</p>
   </div>
   <a class="btn secondary" href="../">← All Games</a>
 </header>
 
-<section id="home" class="grid3">
-  <div class="card tile">
-    <div class="emoji">🧠</div>
-    <h2>Practice</h2>
-    <p>Choose a skill and complete 12 questions with a working space for your stylus.</p>
-    <button class="btn primary" id="practiceStart">Start Practice</button>
-  </div>
-  <div class="card tile">
-    <div class="emoji">🎯</div>
-    <h2>Careful Challenge</h2>
-    <p>Ten mixed questions. The goal is accuracy, not speed.</p>
-    <button class="btn primary" id="challengeStart">Start Challenge</button>
-  </div>
-  <div class="card tile">
-    <div class="emoji">🔎</div>
-    <h2>Careful Maths Habit</h2>
-    <p><b>1.</b> Read the sign. <b>2.</b> Show your working. <b>3.</b> Check place values. <b>4.</b> Enter the final answer.</p>
-    <button class="btn secondary" id="habitStart">Try a Practice</button>
-  </div>
+<section id="home" class="card" style="text-align:center">
+  <h2>Ready for a maths round?</h2>
+  <p>10 mixed addition and subtraction questions with 2-digit and 3-digit numbers. Take your time.</p>
+  <button class="btn primary" id="start">Start 10 Questions</button>
 </section>
 
 <section id="panel" class="card hidden">
@@ -72,15 +55,6 @@
     <button class="btn secondary" id="back">← Home</button>
     <div class="progress"><div id="bar"></div></div>
     <span class="pill" id="counter"></span>
-  </div>
-
-  <div id="select">
-    <h2>Choose what to practise</h2>
-    <p class="muted">Start with the area where careless mistakes happen most often.</p>
-    <div class="skill-grid" id="skills"></div>
-    <div class="row" style="justify-content:center;margin-top:14px">
-      <button class="btn primary" id="go">Start</button>
-    </div>
   </div>
 
   <div id="quiz" class="hidden">
@@ -94,16 +68,16 @@
         <div class="muted" style="text-align:center;font-weight:800" id="modeName"></div>
         <div class="problem" id="question"></div>
         <div class="care-strip">
-          <span class="care-step">👀 Read sign</span>
+          <span class="care-step">👀 Read the sign</span>
           <span class="care-step">✍️ Work it out</span>
-          <span class="care-step">🔎 Check digits</span>
+          <span class="care-step">🔎 Check your answer</span>
         </div>
         <form class="answer" id="form">
           <input id="input" inputmode="numeric" autocomplete="off" aria-label="Final answer" placeholder="Final answer">
           <button class="btn primary">Check</button>
         </form>
         <div class="mini-tip" style="text-align:center">Use the canvas for working. Only the number in the answer box is marked.</div>
-        <div class="feedback" id="feedback"></div>
+        <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
         <div class="row" style="justify-content:center">
           <button class="btn primary hidden" id="next">Next →</button>
         </div>
@@ -130,7 +104,7 @@
     <h2 id="resultTitle"></h2>
     <p id="resultText"></p>
     <div id="carelessSummary" class="review"></div>
-    <button class="btn primary" id="again" style="margin-top:15px">Practise Again</button>
+    <button class="btn primary" id="again" style="margin-top:15px">Play Again</button>
   </div>
 </section>
 
@@ -143,33 +117,10 @@
 
 <script>
 const $=id=>document.getElementById(id);
-const skillDefs=[
-  {id:'add_2digit',title:'➕ 2-digit Addition',desc:'Addition up to 99, including regrouping.'},
-  {id:'subtract_2digit',title:'➖ 2-digit Subtraction',desc:'Subtraction up to 99, including borrowing.'},
-  {id:'mixed_2digit',title:'🔀 Mixed 2-digit',desc:'Switch between + and − carefully.'},
-  {id:'mixed_3digit',title:'🏗️ Mixed 3-digit',desc:'Larger numbers with place-value practice.'}
-];
-let mode='practice',selected='mixed_2digit',i=0,total=12,score=0,streak=0,answered=false,q,attemptAnswers=[],errorTypes={operation:0,place:0,other:0};
-
-for(const s of skillDefs){
-  const b=document.createElement('button');
-  b.className='skill-card'+(s.id===selected?' active':'');
-  b.innerHTML='<b>'+s.title+'</b><span class="muted">'+s.desc+'</span>';
-  b.onclick=()=>{selected=s.id;document.querySelectorAll('.skill-card').forEach(x=>x.classList.remove('active'));b.classList.add('active')};
-  $('skills').appendChild(b);
-}
-
-function openPanel(){
-  $('home').classList.add('hidden');$('panel').classList.remove('hidden');
-  ['select','quiz','results'].forEach(x=>$(x).classList.add('hidden'));
-  $('select').classList.remove('hidden');
-}
-$('practiceStart').onclick=()=>{mode='practice';openPanel()};
-$('habitStart').onclick=()=>{mode='practice';openPanel()};
-$('challengeStart').onclick=()=>{mode='challenge';selected='mixed_3digit';startQuiz()};
+let i=0,total=10,score=0,streak=0,answered=false,q,attemptAnswers=[],errorTypes={operation:0,place:0,other:0};
+$('start').onclick=startQuiz;
 $('back').onclick=()=>{$('panel').classList.add('hidden');$('home').classList.remove('hidden')};
-$('go').onclick=startQuiz;
-$('again').onclick=openPanel;
+$('again').onclick=startQuiz;
 $('reset').onclick=()=>location.reload();
 
 function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min}
@@ -178,28 +129,23 @@ function makePair(digits){
   return [rand(min,max),rand(min,max)];
 }
 function makeQ(){
-  let op='+',digits=2;
-  if(selected==='subtract_2digit')op='−';
-  else if(selected==='mixed_2digit')op=Math.random()<.5?'+':'−';
-  else if(selected==='mixed_3digit'){digits=3;op=Math.random()<.5?'+':'−'}
-  else op='+';
+  const digits=Math.random()<.5?2:3,op=Math.random()<.5?'+':'−';
   let [a,b]=makePair(digits);
   if(op==='−'&&b>a)[a,b]=[b,a];
-  const ans=op==='+'?a+b:a-b;
-  const opposite=op==='+'?a-b:a+b;
-  return {a,b,op,ans,opposite,digits};
+  return {a,b,op,ans:op==='+'?a+b:a-b,opposite:op==='+'?a-b:a+b,digits};
 }
 function startQuiz(){
   $('home').classList.add('hidden');$('panel').classList.remove('hidden');
-  ['select','results'].forEach(x=>$(x).classList.add('hidden'));$('quiz').classList.remove('hidden');
-  i=0;total=mode==='challenge'?10:12;score=0;streak=0;attemptAnswers=[];errorTypes={operation:0,place:0,other:0};
+  $('results').classList.add('hidden');$('quiz').classList.remove('hidden');
+  i=0;score=0;streak=0;attemptAnswers=[];errorTypes={operation:0,place:0,other:0};
   $('score').textContent='0';$('streak').textContent='0';
-  $('modeName').textContent=mode==='challenge'?'Careful Challenge':'Practice';
-  load();
+  $('modeName').textContent='Question '+(i+1)+' of '+total;
+  load();requestAnimationFrame(resizeCanvas);
 }
 function load(){
   q=makeQ();answered=false;
   $('question').textContent=q.a+' '+q.op+' '+q.b+' = ?';
+  $('modeName').textContent='Question '+(i+1)+' of '+total;
   $('input').value='';$('feedback').className='feedback';$('feedback').textContent='';
   $('next').classList.add('hidden');$('counter').textContent=(i+1)+'/'+total;
   $('bar').style.width=(i/total*100)+'%';clearWork();
@@ -208,12 +154,49 @@ function load(){
 function classifyError(v){
   if(v===q.opposite)return 'operation';
   const diff=Math.abs(v-q.ans);
-  if(diff===10||diff===100||diff===1||diff===9||diff===11||diff===90||diff===110)return 'place';
+  if([1,9,10,11,90,100,110].includes(diff))return 'place';
   return 'other';
+}
+function explain(q){
+  const steps=[],width=Math.max(String(q.a).length,String(q.b).length,String(q.ans).length);
+  const digits=Array.from({length:width},(_,col)=>Math.floor(q.a/10**col)%10);
+  let carry=0;
+  for(let col=0;col<width;col++){
+    const unit=10**col,label=['ones','tens','hundreds','thousands'][col]||('10^'+col);
+    const a=digits[col],b=Math.floor(q.b/unit)%10;
+    if(q.op==='+'){
+      const n=a+b+carry,d=n%10,next=Math.floor(n/10);
+      steps.push('In the '+label+' column: '+a+' + '+b+(carry?' + 1 carried':'')+' = '+n+'. Write '+d+(next?' and carry '+next+' to the next column.':'.'));
+      carry=next;
+    }else if(a<b){
+      let donor=col+1;
+      while(donor<width&&digits[donor]===0)donor++;
+      digits[donor]--;
+      for(let k=donor-1;k>col;k--)digits[k]=9;
+      digits[col]+=10;
+      const regroup=donor>col+1?'Regroup through the zero column'+(donor>col+2?'s':'')+' first. ':'';
+      steps.push('In the '+label+' column: '+a+' is smaller than '+b+'. '+regroup+'Borrow 1 from the next place: '+digits[col]+' − '+b+' = '+(digits[col]-b)+'.');
+    }else{
+      steps.push('In the '+label+' column: '+a+' − '+b+' = '+(a-b)+'.');
+    }
+  }
+  return steps;
+}
+function showExplanation(v,errorType){
+  const f=$('feedback');
+  f.textContent='';
+  const intro=document.createElement('div');
+  intro.textContent='You entered '+v+'. '+(errorType==='operation'?'It looks like you may have used the other sign. Look again at '+q.op+'. ':'Let’s check the calculation together. ')+'The answer is '+q.ans+'.';
+  const box=document.createElement('div');box.className='worked-example';
+  const title=document.createElement('b');title.textContent='Work through '+q.a+' '+q.op+' '+q.b+':';
+  const list=document.createElement('ol');
+  for(const step of explain(q)){const li=document.createElement('li');li.textContent=step;list.appendChild(li)}
+  const end=document.createElement('p');end.textContent='Check: '+(q.op==='+'?q.ans+' − '+q.b+' = '+q.a:q.ans+' + '+q.b+' = '+q.a)+'.';
+  box.append(title,list,end);f.append(intro,box);
 }
 $('form').onsubmit=e=>{
   e.preventDefault();
-  if(answered){nextQuestion();return}
+  if(answered)return;
   const raw=$('input').value.trim();
   if(raw==='')return;
   const v=Number(raw);
@@ -228,13 +211,7 @@ $('form').onsubmit=e=>{
   }else{
     streak=0;errorType=classifyError(v);errorTypes[errorType]++;
     $('feedback').className='feedback bad';
-    if(errorType==='operation'){
-      $('feedback').textContent='❌ Check the operation sign. This looks like you used the other operation. The correct answer is '+q.ans+'.';
-    }else if(errorType==='place'){
-      $('feedback').textContent='❌ Very close. Check the ones, tens and hundreds columns carefully. The correct answer is '+q.ans+'.';
-    }else{
-      $('feedback').textContent='❌ Not quite. Recheck your working column by column. The correct answer is '+q.ans+'.';
-    }
+    showExplanation(v,errorType);
   }
   attemptAnswers.push({question:q.a+' '+q.op+' '+q.b,answer:v,expected:q.ans,correct,error_type:errorType});
   $('score').textContent=score;$('streak').textContent=streak;$('next').classList.remove('hidden');
@@ -244,19 +221,19 @@ function nextQuestion(){i++;i>=total?finish():load()}
 function finish(){
   $('quiz').classList.add('hidden');$('results').classList.remove('hidden');$('bar').style.width='100%';
   const pct=Math.round(score/total*100),missed=total-score;
-  $('resultTitle').textContent=pct===100?'Perfectly Careful! 🌟':pct>=90?'Excellent Accuracy! 🎯':pct>=75?'Good Practice! 👍':'Keep Building the Careful Habit ✍️';
+  $('resultTitle').textContent=pct===100?'Perfect round! 🌟':pct>=80?'Great checking! 🎯':'Keep going! ✍️';
   $('resultText').textContent='You got '+score+' out of '+total+' correct ('+pct+'%).';
-  let summary=missed===0?'No careless mistakes this round. Great checking!':
-    'Mistakes to watch: '+errorTypes.operation+' operation-sign · '+errorTypes.place+' place-value/near miss · '+errorTypes.other+' other.';
+  let summary=missed===0?'You checked all ten carefully!':
+    'You reviewed '+missed+' question'+(missed===1?'':'s')+'. Try another round and use what you learned.';
   $('carelessSummary').textContent=summary;
   HannahProgress.recordAttempt({
     game:'addition-subtraction',
-    skill:selected,
-    mode:mode,
+    skill:'mixed_2_3digit',
+    mode:'maths_round',
     score,total,
     answers:attemptAnswers,
-    session_label:skillDefs.find(s=>s.id===selected)?.title||selected,
-    source_version:'2026-09-23'
+    session_label:'Mixed addition and subtraction',
+    source_version:'2026-09-23-single-mode'
   });
 }
 
