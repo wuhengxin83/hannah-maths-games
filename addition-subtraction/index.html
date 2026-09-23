@@ -46,7 +46,7 @@
 
 <section id="home" class="card" style="text-align:center">
   <h2>Ready for a maths round?</h2>
-  <p>10 mixed addition and subtraction questions with 2-digit and 3-digit numbers. Take your time.</p>
+  <p>10 mixed addition and subtraction questions, from quick 2-digit sums to 4-digit working. Take your time.</p>
   <button class="btn primary" id="start">Start 10 Questions</button>
 </section>
 
@@ -117,33 +117,43 @@
 
 <script>
 const $=id=>document.getElementById(id);
-let i=0,total=10,score=0,streak=0,answered=false,q,attemptAnswers=[],errorTypes={operation:0,place:0,other:0};
+let i=0,total=10,score=0,streak=0,answered=false,q,attemptAnswers=[],roundPlan=[],errorTypes={operation:0,place:0,other:0};
 $('start').onclick=startQuiz;
 $('back').onclick=()=>{$('panel').classList.add('hidden');$('home').classList.remove('hidden')};
 $('again').onclick=startQuiz;
 $('reset').onclick=()=>location.reload();
 
 function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min}
-function makePair(digits){
-  const min=digits===2?10:100,max=digits===2?99:999;
-  return [rand(min,max),rand(min,max)];
+function shuffle(items){
+  for(let j=items.length-1;j>0;j--){
+    const k=rand(0,j);[items[j],items[k]]=[items[k],items[j]];
+  }
+  return items;
 }
-function makeQ(){
-  const digits=Math.random()<.5?2:3,op=Math.random()<.5?'+':'−';
-  let [a,b]=makePair(digits);
-  if(op==='−'&&b>a)[a,b]=[b,a];
+function makeQ({digits,op}){
+  const min=10**(digits-1),max=10**digits-1;
+  let a,b;
+  if(op==='+'){
+    // Keep the 4-digit answers within the Primary 3 number range.
+    a=rand(min,digits===4?8999:max);
+    b=rand(min,Math.min(max,9999-a));
+  }else{
+    a=rand(min,max);b=rand(min,max);
+    if(b>a)[a,b]=[b,a];
+  }
   return {a,b,op,ans:op==='+'?a+b:a-b,opposite:op==='+'?a-b:a+b,digits};
 }
 function startQuiz(){
   $('home').classList.add('hidden');$('panel').classList.remove('hidden');
   $('results').classList.add('hidden');$('quiz').classList.remove('hidden');
   i=0;score=0;streak=0;attemptAnswers=[];errorTypes={operation:0,place:0,other:0};
+  roundPlan=shuffle([{digits:2,op:'+'},{digits:2,op:'−'},{digits:3,op:'+'},{digits:3,op:'+'},{digits:3,op:'−'},{digits:4,op:'+'},{digits:4,op:'+'},{digits:4,op:'−'},{digits:4,op:'−'},{digits:4,op:'−'}]);
   $('score').textContent='0';$('streak').textContent='0';
   $('modeName').textContent='Question '+(i+1)+' of '+total;
   load();requestAnimationFrame(resizeCanvas);
 }
 function load(){
-  q=makeQ();answered=false;
+  q=makeQ(roundPlan[i]);answered=false;
   $('question').textContent=q.a+' '+q.op+' '+q.b+' = ?';
   $('modeName').textContent='Question '+(i+1)+' of '+total;
   $('input').value='';$('feedback').className='feedback';$('feedback').textContent='';
@@ -154,7 +164,7 @@ function load(){
 function classifyError(v){
   if(v===q.opposite)return 'operation';
   const diff=Math.abs(v-q.ans);
-  if([1,9,10,11,90,100,110].includes(diff))return 'place';
+  if([1,9,10,11,90,100,110,900,1000,1100].includes(diff))return 'place';
   return 'other';
 }
 function explain(q){
@@ -228,12 +238,12 @@ function finish(){
   $('carelessSummary').textContent=summary;
   HannahProgress.recordAttempt({
     game:'addition-subtraction',
-    skill:'mixed_2_3digit',
+    skill:'mixed_2_4digit',
     mode:'maths_round',
     score,total,
     answers:attemptAnswers,
-    session_label:'Mixed addition and subtraction',
-    source_version:'2026-09-23-single-mode'
+    session_label:'Addition and subtraction up to 4 digits',
+    source_version:'2026-09-23-p3'
   });
 }
 
