@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Addition & Subtraction Lab</title>
+<link rel="stylesheet" href="../styles.css">
+<script src="../progress.js"></script>
+<style>
+  .skill-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .skill-card{border:2px solid #eceaf8;background:#faf9ff;border-radius:16px;padding:14px;text-align:left;cursor:pointer;min-height:95px}
+  .skill-card.active{border-color:var(--purple);background:#efedff}
+  .skill-card b{display:block;font-size:1.05rem;margin-bottom:5px}
+  .quiz-layout{display:grid;grid-template-columns:minmax(260px,.82fr) minmax(340px,1.18fr);gap:16px;align-items:start}
+  .question-card{background:#faf9ff;border-radius:20px;padding:18px;position:sticky;top:12px}
+  .care-strip{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:8px 0 16px}
+  .care-step{background:white;border:1px solid #e0e2ef;border-radius:999px;padding:7px 10px;font-size:.88rem;font-weight:750}
+  .work-card{border:2px solid #eceaf8;border-radius:20px;overflow:hidden;background:white}
+  .work-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:10px 12px;background:#f8f7ff}
+  .tools{display:flex;gap:7px;flex-wrap:wrap}
+  .tool{border:0;border-radius:10px;background:#eceaf8;padding:8px 11px;font-weight:800;cursor:pointer}
+  .tool.active{background:var(--purple);color:white}
+  #workCanvas{display:block;width:100%;height:360px;background:
+    linear-gradient(#edf0f7 1px,transparent 1px),
+    linear-gradient(90deg,#edf0f7 1px,transparent 1px);
+    background-size:28px 28px;touch-action:none;cursor:crosshair}
+  .mini-tip{font-size:.87rem;color:var(--muted)}
+  .review{margin-top:12px;background:#fff8dc;color:#6f5600;border-radius:14px;padding:10px 12px;text-align:center;font-weight:750}
+  .scoreline{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:8px 0}
+  .scorechip{background:#f8f7ff;border-radius:999px;padding:7px 11px;font-weight:800}
+  @media(max-width:760px){
+    .skill-grid{grid-template-columns:1fr}
+    .quiz-layout{grid-template-columns:1fr}
+    .question-card{position:static}
+    #workCanvas{height:320px}
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+<header>
+  <div class="brand">
+    <h1>✏️ Addition & Subtraction Lab</h1>
+    <p>Slow down, show your working, and catch careless mistakes.</p>
+  </div>
+  <a class="btn secondary" href="../">← All Games</a>
+</header>
+
+<section id="home" class="grid3">
+  <div class="card tile">
+    <div class="emoji">🧠</div>
+    <h2>Practice</h2>
+    <p>Choose a skill and complete 12 questions with a working space for your stylus.</p>
+    <button class="btn primary" id="practiceStart">Start Practice</button>
+  </div>
+  <div class="card tile">
+    <div class="emoji">🎯</div>
+    <h2>Careful Challenge</h2>
+    <p>Ten mixed questions. The goal is accuracy, not speed.</p>
+    <button class="btn primary" id="challengeStart">Start Challenge</button>
+  </div>
+  <div class="card tile">
+    <div class="emoji">🔎</div>
+    <h2>Careful Maths Habit</h2>
+    <p><b>1.</b> Read the sign. <b>2.</b> Show your working. <b>3.</b> Check place values. <b>4.</b> Enter the final answer.</p>
+    <button class="btn secondary" id="habitStart">Try a Practice</button>
+  </div>
+</section>
+
+<section id="panel" class="card hidden">
+  <div class="topbar">
+    <button class="btn secondary" id="back">← Home</button>
+    <div class="progress"><div id="bar"></div></div>
+    <span class="pill" id="counter"></span>
+  </div>
+
+  <div id="select">
+    <h2>Choose what to practise</h2>
+    <p class="muted">Start with the area where careless mistakes happen most often.</p>
+    <div class="skill-grid" id="skills"></div>
+    <div class="row" style="justify-content:center;margin-top:14px">
+      <button class="btn primary" id="go">Start</button>
+    </div>
+  </div>
+
+  <div id="quiz" class="hidden">
+    <div class="scoreline">
+      <span class="scorechip">⭐ Correct: <span id="score">0</span></span>
+      <span class="scorechip">🔥 Streak: <span id="streak">0</span></span>
+    </div>
+
+    <div class="quiz-layout">
+      <div class="question-card">
+        <div class="muted" style="text-align:center;font-weight:800" id="modeName"></div>
+        <div class="problem" id="question"></div>
+        <div class="care-strip">
+          <span class="care-step">👀 Read sign</span>
+          <span class="care-step">✍️ Work it out</span>
+          <span class="care-step">🔎 Check digits</span>
+        </div>
+        <form class="answer" id="form">
+          <input id="input" inputmode="numeric" autocomplete="off" aria-label="Final answer" placeholder="Final answer">
+          <button class="btn primary">Check</button>
+        </form>
+        <div class="mini-tip" style="text-align:center">Use the canvas for working. Only the number in the answer box is marked.</div>
+        <div class="feedback" id="feedback"></div>
+        <div class="row" style="justify-content:center">
+          <button class="btn primary hidden" id="next">Next →</button>
+        </div>
+      </div>
+
+      <div class="work-card">
+        <div class="work-head">
+          <div>
+            <b>📝 Working Space</b>
+            <div class="mini-tip">Write here with your stylus or finger.</div>
+          </div>
+          <div class="tools">
+            <button class="tool active" id="pen" type="button">✏️ Pen</button>
+            <button class="tool" id="eraser" type="button">🧽 Eraser</button>
+            <button class="tool" id="clearCanvas" type="button">🗑️ Clear</button>
+          </div>
+        </div>
+        <canvas id="workCanvas" aria-label="Stylus working area"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="results" class="hidden" style="text-align:center;padding:30px">
+    <h2 id="resultTitle"></h2>
+    <p id="resultText"></p>
+    <div id="carelessSummary" class="review"></div>
+    <button class="btn primary" id="again" style="margin-top:15px">Practise Again</button>
+  </div>
+</section>
+
+<section class="card" style="margin-top:14px">
+  <div class="row" style="justify-content:space-between">
+    <div><b>Reset game</b><div class="muted">Safely restart the current session.</div></div>
+    <button class="btn red" id="reset">Reset</button>
+  </div>
+</section>
+
+<script>
+const $=id=>document.getElementById(id);
+const skillDefs=[
+  {id:'add_2digit',title:'➕ 2-digit Addition',desc:'Addition up to 99, including regrouping.'},
+  {id:'subtract_2digit',title:'➖ 2-digit Subtraction',desc:'Subtraction up to 99, including borrowing.'},
+  {id:'mixed_2digit',title:'🔀 Mixed 2-digit',desc:'Switch between + and − carefully.'},
+  {id:'mixed_3digit',title:'🏗️ Mixed 3-digit',desc:'Larger numbers with place-value practice.'}
+];
+let mode='practice',selected='mixed_2digit',i=0,total=12,score=0,streak=0,answered=false,q,attemptAnswers=[],errorTypes={operation:0,place:0,other:0};
+
+for(const s of skillDefs){
+  const b=document.createElement('button');
+  b.className='skill-card'+(s.id===selected?' active':'');
+  b.innerHTML='<b>'+s.title+'</b><span class="muted">'+s.desc+'</span>';
+  b.onclick=()=>{selected=s.id;document.querySelectorAll('.skill-card').forEach(x=>x.classList.remove('active'));b.classList.add('active')};
+  $('skills').appendChild(b);
+}
+
+function openPanel(){
+  $('home').classList.add('hidden');$('panel').classList.remove('hidden');
+  ['select','quiz','results'].forEach(x=>$(x).classList.add('hidden'));
+  $('select').classList.remove('hidden');
+}
+$('practiceStart').onclick=()=>{mode='practice';openPanel()};
+$('habitStart').onclick=()=>{mode='practice';openPanel()};
+$('challengeStart').onclick=()=>{mode='challenge';selected='mixed_3digit';startQuiz()};
+$('back').onclick=()=>{$('panel').classList.add('hidden');$('home').classList.remove('hidden')};
+$('go').onclick=startQuiz;
+$('again').onclick=openPanel;
+$('reset').onclick=()=>location.reload();
+
+function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min}
+function makePair(digits){
+  const min=digits===2?10:100,max=digits===2?99:999;
+  return [rand(min,max),rand(min,max)];
+}
+function makeQ(){
+  let op='+',digits=2;
+  if(selected==='subtract_2digit')op='−';
+  else if(selected==='mixed_2digit')op=Math.random()<.5?'+':'−';
+  else if(selected==='mixed_3digit'){digits=3;op=Math.random()<.5?'+':'−'}
+  else op='+';
+  let [a,b]=makePair(digits);
+  if(op==='−'&&b>a)[a,b]=[b,a];
+  const ans=op==='+'?a+b:a-b;
+  const opposite=op==='+'?a-b:a+b;
+  return {a,b,op,ans,opposite,digits};
+}
+function startQuiz(){
+  $('home').classList.add('hidden');$('panel').classList.remove('hidden');
+  ['select','results'].forEach(x=>$(x).classList.add('hidden'));$('quiz').classList.remove('hidden');
+  i=0;total=mode==='challenge'?10:12;score=0;streak=0;attemptAnswers=[];errorTypes={operation:0,place:0,other:0};
+  $('score').textContent='0';$('streak').textContent='0';
+  $('modeName').textContent=mode==='challenge'?'Careful Challenge':'Practice';
+  load();
+}
+function load(){
+  q=makeQ();answered=false;
+  $('question').textContent=q.a+' '+q.op+' '+q.b+' = ?';
+  $('input').value='';$('feedback').className='feedback';$('feedback').textContent='';
+  $('next').classList.add('hidden');$('counter').textContent=(i+1)+'/'+total;
+  $('bar').style.width=(i/total*100)+'%';clearWork();
+  setTimeout(()=>$('input').focus(),80);
+}
+function classifyError(v){
+  if(v===q.opposite)return 'operation';
+  const diff=Math.abs(v-q.ans);
+  if(diff===10||diff===100||diff===1||diff===9||diff===11||diff===90||diff===110)return 'place';
+  return 'other';
+}
+$('form').onsubmit=e=>{
+  e.preventDefault();
+  if(answered){nextQuestion();return}
+  const raw=$('input').value.trim();
+  if(raw==='')return;
+  const v=Number(raw);
+  if(!Number.isFinite(v))return;
+  answered=true;
+  const correct=v===q.ans;
+  let errorType=null;
+  if(correct){
+    score++;streak++;
+    $('feedback').className='feedback good';
+    $('feedback').textContent=streak>=3?'✅ Correct — and '+streak+' careful answers in a row! 🔥':'✅ Correct. Nice careful working!';
+  }else{
+    streak=0;errorType=classifyError(v);errorTypes[errorType]++;
+    $('feedback').className='feedback bad';
+    if(errorType==='operation'){
+      $('feedback').textContent='❌ Check the operation sign. This looks like you used the other operation. The correct answer is '+q.ans+'.';
+    }else if(errorType==='place'){
+      $('feedback').textContent='❌ Very close. Check the ones, tens and hundreds columns carefully. The correct answer is '+q.ans+'.';
+    }else{
+      $('feedback').textContent='❌ Not quite. Recheck your working column by column. The correct answer is '+q.ans+'.';
+    }
+  }
+  attemptAnswers.push({question:q.a+' '+q.op+' '+q.b,answer:v,expected:q.ans,correct,error_type:errorType});
+  $('score').textContent=score;$('streak').textContent=streak;$('next').classList.remove('hidden');
+};
+$('next').onclick=nextQuestion;
+function nextQuestion(){i++;i>=total?finish():load()}
+function finish(){
+  $('quiz').classList.add('hidden');$('results').classList.remove('hidden');$('bar').style.width='100%';
+  const pct=Math.round(score/total*100),missed=total-score;
+  $('resultTitle').textContent=pct===100?'Perfectly Careful! 🌟':pct>=90?'Excellent Accuracy! 🎯':pct>=75?'Good Practice! 👍':'Keep Building the Careful Habit ✍️';
+  $('resultText').textContent='You got '+score+' out of '+total+' correct ('+pct+'%).';
+  let summary=missed===0?'No careless mistakes this round. Great checking!':
+    'Mistakes to watch: '+errorTypes.operation+' operation-sign · '+errorTypes.place+' place-value/near miss · '+errorTypes.other+' other.';
+  $('carelessSummary').textContent=summary;
+  HannahProgress.recordAttempt({
+    game:'addition-subtraction',
+    skill:selected,
+    mode:mode,
+    score,total,
+    answers:attemptAnswers,
+    session_label:skillDefs.find(s=>s.id===selected)?.title||selected,
+    source_version:'2026-09-23'
+  });
+}
+
+/* Stylus / pointer drawing canvas */
+const canvas=$('workCanvas'),ctx=canvas.getContext('2d');
+let drawing=false,last=null,tool='pen';
+function resizeCanvas(){
+  const rect=canvas.getBoundingClientRect(),ratio=Math.max(1,window.devicePixelRatio||1);
+  const snapshot=document.createElement('canvas');
+  snapshot.width=canvas.width;snapshot.height=canvas.height;
+  if(canvas.width&&canvas.height)snapshot.getContext('2d').drawImage(canvas,0,0);
+  canvas.width=Math.round(rect.width*ratio);canvas.height=Math.round(rect.height*ratio);
+  ctx.setTransform(ratio,0,0,ratio,0,0);
+  ctx.lineCap='round';ctx.lineJoin='round';
+  if(snapshot.width)ctx.drawImage(snapshot,0,0,snapshot.width,snapshot.height,0,0,rect.width,rect.height);
+}
+function pos(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+function startDraw(e){drawing=true;last=pos(e);canvas.setPointerCapture?.(e.pointerId);e.preventDefault()}
+function draw(e){
+  if(!drawing)return;e.preventDefault();
+  const p=pos(e);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);
+  if(tool==='eraser'){ctx.globalCompositeOperation='destination-out';ctx.lineWidth=24}
+  else{ctx.globalCompositeOperation='source-over';ctx.strokeStyle='#25324a';ctx.lineWidth=3}
+  ctx.stroke();ctx.globalCompositeOperation='source-over';last=p;
+}
+function stopDraw(e){drawing=false;last=null;try{canvas.releasePointerCapture?.(e.pointerId)}catch(_){}}
+canvas.addEventListener('pointerdown',startDraw);
+canvas.addEventListener('pointermove',draw);
+canvas.addEventListener('pointerup',stopDraw);
+canvas.addEventListener('pointercancel',stopDraw);
+function clearWork(){ctx.clearRect(0,0,canvas.width,canvas.height)}
+$('pen').onclick=()=>setTool('pen');
+$('eraser').onclick=()=>setTool('eraser');
+$('clearCanvas').onclick=clearWork;
+function setTool(t){tool=t;$('pen').classList.toggle('active',t==='pen');$('eraser').classList.toggle('active',t==='eraser')}
+window.addEventListener('resize',()=>{clearTimeout(window.__canvasResize);window.__canvasResize=setTimeout(resizeCanvas,120)});
+requestAnimationFrame(resizeCanvas);
+</script>
+</main>
+</body>
+</html>
