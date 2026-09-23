@@ -19,7 +19,7 @@
   #workCanvas{display:block;width:100%;height:360px;background:
     linear-gradient(#edf0f7 1px,transparent 1px),
     linear-gradient(90deg,#edf0f7 1px,transparent 1px);
-    background-size:28px 28px;touch-action:none;cursor:crosshair}
+    background-size:28px 28px;touch-action:pan-y pinch-zoom;cursor:crosshair}
   .mini-tip{font-size:.87rem;color:var(--muted)}
   .worked-example{margin-top:10px;text-align:left;background:#fff;border-radius:12px;padding:12px 14px;color:#25324a;font-weight:500;line-height:1.5}
   .worked-example ol{margin:8px 0 0;padding-left:22px}
@@ -87,7 +87,7 @@
         <div class="work-head">
           <div>
             <b>📝 Working Space</b>
-            <div class="mini-tip">Write here with your stylus or finger.</div>
+            <div class="mini-tip">Write with your stylus. Swipe with a finger to scroll.</div>
           </div>
           <div class="tools">
             <button class="tool active" id="pen" type="button">✏️ Pen</button>
@@ -239,7 +239,7 @@ function finish(){
 
 /* Stylus / pointer drawing canvas */
 const canvas=$('workCanvas'),ctx=canvas.getContext('2d');
-let drawing=false,last=null,tool='pen';
+let drawing=false,last=null,tool='pen',activePointerId=null;
 function resizeCanvas(){
   const rect=canvas.getBoundingClientRect(),ratio=Math.max(1,window.devicePixelRatio||1);
   const snapshot=document.createElement('canvas');
@@ -251,15 +251,24 @@ function resizeCanvas(){
   if(snapshot.width)ctx.drawImage(snapshot,0,0,snapshot.width,snapshot.height,0,0,rect.width,rect.height);
 }
 function pos(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
-function startDraw(e){drawing=true;last=pos(e);canvas.setPointerCapture?.(e.pointerId);e.preventDefault()}
+function startDraw(e){
+  if(e.pointerType!=='pen'||activePointerId!==null)return;
+  activePointerId=e.pointerId;drawing=true;last=pos(e);
+  canvas.setPointerCapture?.(e.pointerId);e.preventDefault();
+}
 function draw(e){
-  if(!drawing)return;e.preventDefault();
+  if(!drawing||e.pointerType!=='pen'||e.pointerId!==activePointerId)return;
+  e.preventDefault();
   const p=pos(e);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);
   if(tool==='eraser'){ctx.globalCompositeOperation='destination-out';ctx.lineWidth=24}
   else{ctx.globalCompositeOperation='source-over';ctx.strokeStyle='#25324a';ctx.lineWidth=3}
   ctx.stroke();ctx.globalCompositeOperation='source-over';last=p;
 }
-function stopDraw(e){drawing=false;last=null;try{canvas.releasePointerCapture?.(e.pointerId)}catch(_){}}
+function stopDraw(e){
+  if(e.pointerId!==activePointerId)return;
+  drawing=false;last=null;activePointerId=null;
+  try{canvas.releasePointerCapture?.(e.pointerId)}catch(_){}
+}
 canvas.addEventListener('pointerdown',startDraw);
 canvas.addEventListener('pointermove',draw);
 canvas.addEventListener('pointerup',stopDraw);
