@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Advanced Times Tables · Hannah's Maths Quest</title>
+<link rel="stylesheet" href="../styles.css">
+<script src="../progress.js"></script>
+<style>
+  .quiz-layout{display:grid;grid-template-columns:minmax(260px,.82fr) minmax(340px,1.18fr);gap:16px;align-items:start}
+  .question-card{background:#faf9ff;border-radius:20px;padding:18px;position:sticky;top:12px}
+  .care-strip{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:8px 0 16px}
+  .care-step{background:white;border:1px solid #e0e2ef;border-radius:999px;padding:7px 10px;font-size:.88rem;font-weight:750}
+  .work-card{border:2px solid #eceaf8;border-radius:20px;overflow:hidden;background:white}
+  .work-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:10px 12px;background:#f8f7ff}
+  .tools{display:flex;gap:7px;flex-wrap:wrap}
+  .tool{border:0;border-radius:10px;background:#eceaf8;padding:8px 11px;font-weight:800;cursor:pointer}
+  .tool.active{background:var(--purple);color:white}
+  #workCanvas{display:block;width:100%;height:360px;background:
+    linear-gradient(#edf0f7 1px,transparent 1px),
+    linear-gradient(90deg,#edf0f7 1px,transparent 1px);
+    background-size:28px 28px;touch-action:none;cursor:crosshair}
+  .mini-tip{font-size:.87rem;color:var(--muted)}
+  .worked-example{margin-top:10px;text-align:left;background:#fff;border-radius:12px;padding:12px 14px;color:#25324a;font-weight:500;line-height:1.5}
+  .worked-example ol{margin:8px 0 0;padding-left:22px}
+  .worked-example li{margin:5px 0}
+  .review{margin-top:12px;background:#fff8dc;color:#6f5600;border-radius:14px;padding:10px 12px;text-align:center;font-weight:750}
+  .scoreline{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:8px 0}
+  .scorechip{background:#f8f7ff;border-radius:999px;padding:7px 11px;font-weight:800}
+  @media(max-width:760px){
+    .quiz-layout{grid-template-columns:1fr}
+    .question-card{position:static}
+    #workCanvas{height:320px}
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+<header>
+  <div class="brand">
+    <h1>🧮 Advanced Times Tables</h1>
+    <p>Multiply a 2-digit number by a 1-digit number. Show your working and check each answer.</p>
+  </div>
+  <a class="btn secondary" href="../">← All Games</a>
+</header>
+
+<section id="home" class="card" style="text-align:center">
+  <h2>Ready for a multiplication round?</h2>
+  <p>10 questions, each with a 2-digit number × a 1-digit number. No timer.</p>
+  <button class="btn primary" id="start">Start 10 Questions</button>
+</section>
+
+<section id="panel" class="card hidden">
+  <div class="topbar">
+    <button class="btn secondary" id="back">← Home</button>
+    <div class="progress"><div id="bar"></div></div>
+    <span class="pill" id="counter"></span>
+  </div>
+
+  <div id="quiz" class="hidden">
+    <div class="scoreline">
+      <span class="scorechip">⭐ Correct: <span id="score">0</span></span>
+      <span class="scorechip">🔥 Streak: <span id="streak">0</span></span>
+    </div>
+
+    <div class="quiz-layout">
+      <div class="question-card">
+        <div class="muted" style="text-align:center;font-weight:800" id="modeName"></div>
+        <div class="problem" id="question"></div>
+        <div class="care-strip">
+          <span class="care-step">👀 Read the numbers</span>
+          <span class="care-step">✍️ Work it out</span>
+          <span class="care-step">🔎 Check your answer</span>
+        </div>
+        <form class="answer" id="form">
+          <input id="input" inputmode="numeric" autocomplete="off" aria-label="Final answer" placeholder="Final answer">
+          <button class="btn primary">Check</button>
+        </form>
+        <div class="mini-tip" style="text-align:center">Show your working with the stylus. Enter only the final number in the answer box.</div>
+        <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
+        <div class="row" style="justify-content:center">
+          <button class="btn primary hidden" id="next">Next →</button>
+        </div>
+      </div>
+
+      <div class="work-card">
+        <div class="work-head">
+          <div>
+            <b>📝 Working Space</b>
+            <div class="mini-tip">Write with your stylus. Swipe with a finger to scroll.</div>
+          </div>
+          <div class="tools">
+            <button class="tool active" id="pen" type="button">✏️ Pen</button>
+            <button class="tool" id="eraser" type="button">🧽 Eraser</button>
+            <button class="tool" id="clearCanvas" type="button">🗑️ Clear</button>
+          </div>
+        </div>
+        <canvas id="workCanvas" aria-label="Stylus working area"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="results" class="hidden" style="text-align:center;padding:30px">
+    <h2 id="resultTitle"></h2>
+    <p id="resultText"></p>
+    <div id="carelessSummary" class="review"></div>
+    <button class="btn primary" id="again" style="margin-top:15px">Play Again</button>
+  </div>
+</section>
+
+<section class="card" style="margin-top:14px">
+  <div class="row" style="justify-content:space-between">
+    <div><b>Reset game</b><div class="muted">Safely restart the current session.</div></div>
+    <button class="btn red" id="reset">Reset</button>
+  </div>
+</section>
+
+<script>
+const $=id=>document.getElementById(id);
+let i=0,total=10,score=0,streak=0,answered=false,q,attemptAnswers=[];
+$('start').onclick=startQuiz;
+$('back').onclick=()=>{$('panel').classList.add('hidden');$('home').classList.remove('hidden')};
+$('again').onclick=startQuiz;
+$('reset').onclick=()=>location.reload();
+
+function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min}
+function makeQ(){
+  const a=rand(12,99),b=rand(2,9);
+  return {a,b,ans:a*b};
+}
+function startQuiz(){
+  $('home').classList.add('hidden');$('panel').classList.remove('hidden');
+  $('results').classList.add('hidden');$('quiz').classList.remove('hidden');
+  i=0;score=0;streak=0;attemptAnswers=[];
+  $('score').textContent='0';$('streak').textContent='0';
+  load();requestAnimationFrame(resizeCanvas);
+}
+function load(){
+  q=makeQ();answered=false;
+  $('question').textContent=q.a+' × '+q.b+' = ?';
+  $('modeName').textContent='Question '+(i+1)+' of '+total;
+  $('input').value='';$('input').disabled=false;
+  $('feedback').className='feedback';$('feedback').textContent='';
+  $('next').classList.add('hidden');$('counter').textContent=(i+1)+'/'+total;
+  $('bar').style.width=(i/total*100)+'%';clearWork();
+  setTimeout(()=>$('input').focus(),80);
+}
+function explain(q){
+  const ones=q.a%10,tens=Math.floor(q.a/10);
+  const onesProduct=ones*q.b,carry=Math.floor(onesProduct/10),onesDigit=onesProduct%10;
+  const tensProduct=tens*q.b+carry;
+  return [
+    'Ones: '+ones+' × '+q.b+' = '+onesProduct+'. Write '+onesDigit+(carry?' and carry '+carry+' ten'+(carry===1?'':'s')+'.':'.'),
+    'Tens: '+tens+' × '+q.b+(carry?' + '+carry+' carried':'')+' = '+tensProduct+'. That is '+(tensProduct*10)+'.',
+    'Put the tens and ones together: '+(tensProduct*10)+' + '+onesDigit+' = '+q.ans+'.'
+  ];
+}
+function showExplanation(v){
+  const f=$('feedback');f.textContent='';
+  const intro=document.createElement('div');
+  intro.textContent='You entered '+v+'. Let’s work through '+q.a+' × '+q.b+'. The answer is '+q.ans+'.';
+  const box=document.createElement('div');box.className='worked-example';
+  const list=document.createElement('ol');
+  for(const step of explain(q)){const li=document.createElement('li');li.textContent=step;list.appendChild(li)}
+  const check=document.createElement('p');
+  check.textContent='Check another way: '+(Math.floor(q.a/10)*10)+' × '+q.b+' = '+(Math.floor(q.a/10)*10*q.b)+', and '+(q.a%10)+' × '+q.b+' = '+((q.a%10)*q.b)+'. Add them to get '+q.ans+'.';
+  box.append(list,check);f.append(intro,box);
+}
+$('form').onsubmit=e=>{
+  e.preventDefault();
+  if(answered)return;
+  const raw=$('input').value.trim();
+  if(!/^\\d+$/.test(raw))return;
+  const v=Number(raw);
+  answered=true;$('input').disabled=true;
+  const correct=v===q.ans;
+  if(correct){
+    score++;streak++;
+    $('feedback').className='feedback good';
+    $('feedback').textContent=streak>=3?'✅ Correct — '+streak+' in a row! 🔥':'✅ Correct! Your working paid off.';
+  }else{
+    streak=0;$('feedback').className='feedback bad';showExplanation(v);
+  }
+  attemptAnswers.push({question:q.a+' × '+q.b,answer:v,expected:q.ans,correct});
+  $('score').textContent=score;$('streak').textContent=streak;$('next').classList.remove('hidden');
+};
+$('next').onclick=nextQuestion;
+function nextQuestion(){i++;i>=total?finish():load()}
+function finish(){
+  $('quiz').classList.add('hidden');$('results').classList.remove('hidden');$('bar').style.width='100%';
+  const pct=Math.round(score/total*100),missed=total-score;
+  $('resultTitle').textContent=pct===100?'Perfect round! 🌟':pct>=80?'Great multiplying! 🎯':'Keep going! ✍️';
+  $('resultText').textContent='You got '+score+' out of '+total+' correct ('+pct+'%).';
+  $('carelessSummary').textContent=missed===0?'You checked all ten carefully!':'You reviewed '+missed+' question'+(missed===1?'':'s')+'. Use the steps you learned in another round.';
+  HannahProgress.recordAttempt({
+    game:'advanced-multiplication',skill:'2digit_by_1digit',mode:'maths_round',
+    score,total,answers:attemptAnswers,session_label:'2-digit × 1-digit multiplication',
+    source_version:'2026-09-23'
+  });
+}
+
+/* Stylus / pointer drawing canvas */
+const canvas=$('workCanvas'),ctx=canvas.getContext('2d');
+let drawing=false,last=null,tool='pen',activePointerId=null;
+let fingerScrollId=null,fingerLastY=0;
+function resizeCanvas(){
+  const rect=canvas.getBoundingClientRect(),ratio=Math.max(1,window.devicePixelRatio||1);
+  const snapshot=document.createElement('canvas');
+  snapshot.width=canvas.width;snapshot.height=canvas.height;
+  if(canvas.width&&canvas.height)snapshot.getContext('2d').drawImage(canvas,0,0);
+  canvas.width=Math.round(rect.width*ratio);canvas.height=Math.round(rect.height*ratio);
+  ctx.setTransform(ratio,0,0,ratio,0,0);
+  ctx.lineCap='round';ctx.lineJoin='round';
+  if(snapshot.width)ctx.drawImage(snapshot,0,0,snapshot.width,snapshot.height,0,0,rect.width,rect.height);
+}
+function pos(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+function startDraw(e){
+  if(e.pointerType==='touch'){
+    if(activePointerId===null&&fingerScrollId===null){
+      fingerScrollId=e.pointerId;fingerLastY=e.clientY;
+    }
+    return;
+  }
+  if(e.pointerType!=='pen'||activePointerId!==null)return;
+  fingerScrollId=null;
+  activePointerId=e.pointerId;drawing=true;last=pos(e);
+  canvas.setPointerCapture?.(e.pointerId);e.preventDefault();
+}
+function draw(e){
+  if(e.pointerType==='touch'){
+    if(e.pointerId!==fingerScrollId||activePointerId!==null)return;
+    window.scrollBy(0,fingerLastY-e.clientY);
+    fingerLastY=e.clientY;
+    e.preventDefault();
+    return;
+  }
+  if(!drawing||e.pointerType!=='pen'||e.pointerId!==activePointerId)return;
+  e.preventDefault();
+  const samples=e.getCoalescedEvents?.();
+  const points=samples?.length?samples:[e];
+  if(tool==='eraser'){ctx.globalCompositeOperation='destination-out';ctx.lineWidth=24}
+  else{ctx.globalCompositeOperation='source-over';ctx.strokeStyle='#25324a';ctx.lineWidth=3}
+  ctx.beginPath();ctx.moveTo(last.x,last.y);
+  for(const point of points){const p=pos(point);ctx.lineTo(p.x,p.y);last=p}
+  const current=pos(e);
+  if(current.x!==last.x||current.y!==last.y){ctx.lineTo(current.x,current.y);last=current}
+  ctx.stroke();ctx.globalCompositeOperation='source-over';
+}
+function stopDraw(e){
+  if(e.pointerId===fingerScrollId){fingerScrollId=null;return}
+  if(e.pointerId!==activePointerId)return;
+  drawing=false;last=null;activePointerId=null;
+  try{canvas.releasePointerCapture?.(e.pointerId)}catch(_){}
+}
+canvas.addEventListener('pointerdown',startDraw);
+canvas.addEventListener('pointermove',draw);
+canvas.addEventListener('pointerup',stopDraw);
+canvas.addEventListener('pointercancel',stopDraw);
+function clearWork(){ctx.clearRect(0,0,canvas.width,canvas.height)}
+$('pen').onclick=()=>setTool('pen');
+$('eraser').onclick=()=>setTool('eraser');
+$('clearCanvas').onclick=clearWork;
+function setTool(t){tool=t;$('pen').classList.toggle('active',t==='pen');$('eraser').classList.toggle('active',t==='eraser')}
+window.addEventListener('resize',()=>{clearTimeout(window.__canvasResize);window.__canvasResize=setTimeout(resizeCanvas,120)});
+requestAnimationFrame(resizeCanvas);
+</script>
+</main>
+</body>
+</html>
