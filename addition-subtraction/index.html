@@ -274,11 +274,14 @@ function draw(e){
   }
   if(!drawing||e.pointerType!=='pen'||e.pointerId!==activePointerId)return;
   e.preventDefault();
-  const points=e.getCoalescedEvents?.()||[e];
+  const samples=e.getCoalescedEvents?.();
+  const points=samples?.length?samples:[e];
   if(tool==='eraser'){ctx.globalCompositeOperation='destination-out';ctx.lineWidth=24}
   else{ctx.globalCompositeOperation='source-over';ctx.strokeStyle='#25324a';ctx.lineWidth=3}
   ctx.beginPath();ctx.moveTo(last.x,last.y);
   for(const point of points){const p=pos(point);ctx.lineTo(p.x,p.y);last=p}
+  const current=pos(e);
+  if(current.x!==last.x||current.y!==last.y){ctx.lineTo(current.x,current.y);last=current}
   ctx.stroke();ctx.globalCompositeOperation='source-over';
 }
 function stopDraw(e){
