@@ -139,11 +139,11 @@ function load(){
   q=makeQ();answered=false;
   $('question').textContent=q.a+' × '+q.b+' = ?';
   $('modeName').textContent='Question '+(i+1)+' of '+total;
-  $('input').value='';$('input').disabled=false;
+  $('input').blur();$('input').value='';$('input').disabled=false;
   $('feedback').className='feedback';$('feedback').textContent='';
   $('next').classList.add('hidden');$('counter').textContent=(i+1)+'/'+total;
   $('bar').style.width=(i/total*100)+'%';clearWork();
-  setTimeout(()=>$('input').focus(),80);
+
 }
 function explain(q){
   const ones=q.a%10,tens=Math.floor(q.a/10);
@@ -172,7 +172,7 @@ $('form').onsubmit=e=>{
   const raw=$('input').value.trim();
   if(!/^\\d+$/.test(raw))return;
   const v=Number(raw);
-  answered=true;$('input').disabled=true;
+  answered=true;$('input').blur();$('input').disabled=true;
   const correct=v===q.ans;
   if(correct){
     score++;streak++;
