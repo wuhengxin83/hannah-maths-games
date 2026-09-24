@@ -156,10 +156,10 @@ function load(){
   q=makeQ(roundPlan[i]);answered=false;
   $('question').textContent=q.a+' '+q.op+' '+q.b+' = ?';
   $('modeName').textContent='Question '+(i+1)+' of '+total;
-  $('input').value='';$('feedback').className='feedback';$('feedback').textContent='';
+  $('input').blur();$('input').value='';$('feedback').className='feedback';$('feedback').textContent='';
   $('next').classList.add('hidden');$('counter').textContent=(i+1)+'/'+total;
   $('bar').style.width=(i/total*100)+'%';clearWork();
-  setTimeout(()=>$('input').focus(),80);
+
 }
 function classifyError(v){
   if(v===q.opposite)return 'operation';
@@ -211,7 +211,7 @@ $('form').onsubmit=e=>{
   if(raw==='')return;
   const v=Number(raw);
   if(!Number.isFinite(v))return;
-  answered=true;
+  answered=true;$('input').blur();
   const correct=v===q.ans;
   let errorType=null;
   if(correct){
