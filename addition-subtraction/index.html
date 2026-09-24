@@ -104,6 +104,8 @@
     <h2 id="resultTitle"></h2>
     <p id="resultText"></p>
     <div id="carelessSummary" class="review"></div>
+    <p id="saveStatus" role="status" aria-live="polite"></p>
+    <button class="btn secondary hidden" id="retrySave" type="button">Retry saving</button>
     <button class="btn primary" id="again" style="margin-top:15px">Play Again</button>
   </div>
 </section>
@@ -118,9 +120,11 @@
 <script>
 const $=id=>document.getElementById(id);
 let i=0,total=10,score=0,streak=0,answered=false,q,attemptAnswers=[],roundPlan=[],errorTypes={operation:0,place:0,other:0};
+let pendingResult=null,saveInProgress=false;
 $('start').onclick=startQuiz;
 $('back').onclick=()=>{$('panel').classList.add('hidden');$('home').classList.remove('hidden')};
 $('again').onclick=startQuiz;
+$('retrySave').onclick=saveRound;
 $('reset').onclick=()=>location.reload();
 
 function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min}
@@ -236,7 +240,7 @@ function finish(){
   let summary=missed===0?'You checked all ten carefully!':
     'You reviewed '+missed+' question'+(missed===1?'':'s')+'. Try another round and use what you learned.';
   $('carelessSummary').textContent=summary;
-  HannahProgress.recordAttempt({
+  pendingResult={
     game:'addition-subtraction',
     skill:'mixed_2_4digit',
     mode:'maths_round',
@@ -244,7 +248,26 @@ function finish(){
     answers:attemptAnswers,
     session_label:'Addition and subtraction up to 4 digits',
     source_version:'2026-09-23-p3'
-  });
+  };
+  saveRound();
+}
+async function saveRound(){
+  if(!pendingResult||saveInProgress)return;
+  saveInProgress=true;
+  $('retrySave').classList.add('hidden');
+  $('saveStatus').textContent='Saving your result…';
+  const result=await HannahProgress.recordAttempt(pendingResult);
+  saveInProgress=false;
+  if(result.ok){
+    pendingResult=null;
+    $('saveStatus').textContent='✅ Saved to Parent Dashboard.';
+  }else if(result.skipped){
+    pendingResult=null;
+    $('saveStatus').textContent='Parent Test Mode is on. This result was not recorded.';
+  }else{
+    $('saveStatus').textContent='Result could not be saved. Check your connection and try again.';
+    $('retrySave').classList.remove('hidden');
+  }
 }
 
 /* Stylus / pointer drawing canvas */
