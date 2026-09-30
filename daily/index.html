@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Advanced Times Tables · Hannah's Maths Quest</title>
+<title>Daily Maths Quest · Hannah's Maths Quest</title>
 <link rel="stylesheet" href="../styles.css">
 <script src="../progress.js"></script>
 <style>
@@ -38,16 +38,16 @@
 <main class="wrap">
 <header>
   <div class="brand">
-    <h1>🧮 Advanced Times Tables</h1>
-    <p>Multiply a 2-digit number by a 1-digit number. Show your working and check each answer.</p>
+    <h1>🌈 Daily Maths Quest</h1>
+    <p>A little of everything: work it out, check it and learn every day.</p>
   </div>
   <a class="btn secondary" href="../">← All Games</a>
 </header>
 
 <section id="home" class="card" style="text-align:center">
-  <h2>Ready for a multiplication round?</h2>
-  <p>10 questions, each with a 2-digit number × a 1-digit number. No timer.</p>
-  <button class="btn primary" id="start">Start 10 Questions</button>
+  <h2>Ready for today’s adventure?</h2>
+  <p>12 questions: 3 addition/subtraction, 3 multiplication, 3 division and 3 fractions. A fresh set each Singapore day. No timer.</p>
+  <button class="btn primary" id="start">Start Daily Quest</button>
 </section>
 
 <section id="panel" class="card hidden">
@@ -106,7 +106,7 @@
     <div id="carelessSummary" class="review"></div>
     <p id="saveStatus" role="status" aria-live="polite"></p>
     <button class="btn secondary hidden" id="retrySave" type="button">Retry saving</button>
-    <button class="btn primary" id="again" style="margin-top:15px">Play Again</button>
+    <button class="btn primary" id="again" style="margin-top:15px">Replay Today’s Quest</button>
   </div>
 </section>
 
@@ -119,109 +119,46 @@
 
 <script>
 const $=id=>document.getElementById(id);
-let i=0,total=10,score=0,streak=0,answered=false,q,attemptAnswers=[];
-let pendingResult=null,saveInProgress=false;
-$('start').onclick=startQuiz;
-$('back').onclick=()=>{$('panel').classList.add('hidden');$('home').classList.remove('hidden')};
-$('again').onclick=startQuiz;
-$('retrySave').onclick=saveRound;
-$('reset').onclick=()=>location.reload();
-
-function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min}
-function makeQ(){
-  const a=rand(12,99),b=rand(2,9);
-  return {a,b,ans:a*b};
+let i=0,total=12,score=0,streak=0,answered=false,q,attemptAnswers=[],round=[],pendingResult=null,saveInProgress=false,questDate;
+$('start').onclick=startQuiz;$('again').onclick=startQuiz;$('retrySave').onclick=saveRound;
+$('back').onclick=()=>{$('panel').classList.add('hidden');$('home').classList.remove('hidden')};$('reset').onclick=()=>location.reload();
+function dayKey(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Singapore',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
+function dailyQuestions(date){
+ let seed=2166136261;for(const c of date)seed=Math.imul(seed^c.charCodeAt(0),16777619);
+ const rand=(a,b)=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return a+Math.floor(seed/4294967296*(b-a+1))};
+ const out=[];
+ for(let n=0;n<3;n++){
+ const op=n===1?'−':'+',a=rand(n===2?1000:100,n===2?6500:899),b=rand(10,Math.min(a,9999-a));
+ out.push({kind:'addition-subtraction',prompt:`${a} ${op} ${b}`,ans:op==='+'?a+b:a-b,a,b,op});
+ const m=rand(n===0?2:12,n===0?12:99),k=rand(2,9);out.push({kind:'advanced-multiplication',prompt:`${m} × ${k}`,ans:m*k,a:m,b:k});
+ const divisor=rand(2,12),quotient=rand(2,n===2?20:12);out.push({kind:'division',prompt:`${divisor*quotient} ÷ ${divisor}`,ans:quotient,a:divisor*quotient,b:divisor});
+ const d=[4,6,8,10,12][rand(0,4)],x=rand(1,d-2),y=rand(1,d-x),fop=n===1?'−':'+';
+ const top=fop==='+'?x+y:Math.max(x,y)-Math.min(x,y);
+ const aa=fop==='+'?x:Math.max(x,y),bb=fop==='+'?y:Math.min(x,y);
+ const gcd=(a,b)=>b?gcd(b,a%b):a,g=gcd(top,d);
+ out.push({kind:'fractions',prompt:`${aa}/${d} ${fop} ${bb}/${d}`,ans:`${top/g}/${d/g}`,n:top,d,a:aa,b:bb,op:fop});
+ }
+ return out;
 }
-function startQuiz(){
-  $('home').classList.add('hidden');$('panel').classList.remove('hidden');
-  $('results').classList.add('hidden');$('quiz').classList.remove('hidden');
-  i=0;score=0;streak=0;attemptAnswers=[];
-  $('score').textContent='0';$('streak').textContent='0';
-  load();requestAnimationFrame(resizeCanvas);
+function startQuiz(){questDate=dayKey();round=dailyQuestions(questDate);i=score=streak=0;attemptAnswers=[];
+ $('home').classList.add('hidden');$('panel').classList.remove('hidden');$('results').classList.add('hidden');$('quiz').classList.remove('hidden');$('score').textContent='0';$('streak').textContent='0';load();requestAnimationFrame(resizeCanvas)}
+function load(){q=round[i];answered=false;$('question').textContent=q.prompt+' = ?';$('question').style.fontSize='clamp(1.8rem,5vw,3rem)';$('modeName').textContent=questDate+' · '+({'addition-subtraction':'Addition & Subtraction','advanced-multiplication':'Multiplication',division:'Division',fractions:'Fractions'}[q.kind]);$('input').blur();$('input').value='';$('input').disabled=false;$('input').inputMode=q.kind==='fractions'?'text':'numeric';$('input').placeholder=q.kind==='fractions'?'e.g. 3/4':'Final answer';$('input').setAttribute('aria-label',q.kind==='fractions'?'Fraction answer, for example 3/4':'Final answer');$('feedback').className='feedback';$('feedback').textContent=q.kind==='fractions'?'Type top/bottom, e.g. 3/4. Equivalent fractions are accepted.':'';$('next').classList.add('hidden');$('counter').textContent=(i+1)+'/'+total;$('bar').style.width=i/total*100+'%';clearWork()}
+function explanation(q,v){
+ const intro='You entered '+v+'. The correct answer is '+q.ans+'.\n';
+ if(q.kind==='fractions')return intro+'The denominators match, so '+(q.op==='+'?'add':'subtract')+' the numerators: '+q.a+' '+q.op+' '+q.b+' = '+q.n+'. Keep denominator '+q.d+'.\nThis gives '+q.n+'/'+q.d+'. Simplify to '+q.ans+'.';
+ if(q.kind==='division')return intro+'Think: '+q.b+' × ? = '+q.a+'.\n'+q.b+' × '+q.ans+' = '+q.a+', so there are '+q.ans+' groups of '+q.b+'.';
+ if(q.kind==='advanced-multiplication'){const tens=Math.floor(q.a/10)*10,ones=q.a%10;return intro+'Split '+q.a+' into '+tens+' + '+ones+'.\n'+tens+' × '+q.b+' = '+tens*q.b+'.\n'+ones+' × '+q.b+' = '+ones*q.b+'.\nAdd the two products: '+tens*q.b+' + '+ones*q.b+' = '+q.ans+'.'}
+ let digits=String(q.a).split('').reverse().map(Number),carry=0,steps=[];
+ for(let col=0;col<Math.max(String(q.a).length,String(q.b).length);col++){const a=digits[col]||0,b=Math.floor(q.b/10**col)%10,label=['ones','tens','hundreds','thousands'][col];if(q.op==='+'){const sum=a+b+carry;steps.push(label+': '+a+' + '+b+' + '+carry+' carried = '+sum+'. Write '+sum%10+(sum>=10?' and carry 1.':'.'));carry=Math.floor(sum/10)}else{if(a<b){let j=col+1;while(digits[j]===0)j++;digits[j]--;for(let k=j-1;k>col;k--)digits[k]=9;digits[col]=a+10;steps.push(label+': regroup from the next non-zero place, through any zeros. '+(a+10)+' − '+b+' = '+(a+10-b)+'.')}else steps.push(label+': '+a+' − '+b+' = '+(a-b)+'.')}}
+ if(carry)steps.push('Write the final carried '+carry+' in the next place.');return intro+steps.join('\n')+'\nCheck: '+(q.op==='+'?q.ans+' − '+q.b:q.ans+' + '+q.b)+' = '+q.a+'.';
 }
-function load(){
-  q=makeQ();answered=false;
-  $('question').textContent=q.a+' × '+q.b+' = ?';
-  $('modeName').textContent='Question '+(i+1)+' of '+total;
-  $('input').blur();$('input').value='';$('input').disabled=false;
-  $('feedback').className='feedback';$('feedback').textContent='';
-  $('next').classList.add('hidden');$('counter').textContent=(i+1)+'/'+total;
-  $('bar').style.width=(i/total*100)+'%';clearWork();
-
-}
-function explain(q){
-  const ones=q.a%10,tens=Math.floor(q.a/10);
-  const onesProduct=ones*q.b,carry=Math.floor(onesProduct/10),onesDigit=onesProduct%10;
-  const tensProduct=tens*q.b+carry;
-  return [
-    'Ones: '+ones+' × '+q.b+' = '+onesProduct+'. Write '+onesDigit+(carry?' and carry '+carry+' ten'+(carry===1?'':'s')+'.':'.'),
-    'Tens: '+tens+' × '+q.b+(carry?' + '+carry+' carried':'')+' = '+tensProduct+'. That is '+(tensProduct*10)+'.',
-    'Put the tens and ones together: '+(tensProduct*10)+' + '+onesDigit+' = '+q.ans+'.'
-  ];
-}
-function showExplanation(v){
-  const f=$('feedback');f.textContent='';
-  const intro=document.createElement('div');
-  intro.textContent='You entered '+v+'. Let’s work through '+q.a+' × '+q.b+'. The answer is '+q.ans+'.';
-  const box=document.createElement('div');box.className='worked-example';
-  const list=document.createElement('ol');
-  for(const step of explain(q)){const li=document.createElement('li');li.textContent=step;list.appendChild(li)}
-  const check=document.createElement('p');
-  check.textContent='Check another way: '+(Math.floor(q.a/10)*10)+' × '+q.b+' = '+(Math.floor(q.a/10)*10*q.b)+', and '+(q.a%10)+' × '+q.b+' = '+((q.a%10)*q.b)+'. Add them to get '+q.ans+'.';
-  box.append(list,check);f.append(intro,box);
-}
-$('form').onsubmit=e=>{
-  e.preventDefault();
-  if(answered)return;
-  const raw=$('input').value.trim();
-  if(!/^\d+$/.test(raw))return;
-  const v=Number(raw);
-  answered=true;$('input').blur();$('input').disabled=true;
-  const correct=v===q.ans;
-  if(correct){
-    score++;streak++;
-    $('feedback').className='feedback good';
-    $('feedback').textContent=streak>=3?'✅ Correct — '+streak+' in a row! 🔥':'✅ Correct! Your working paid off.';
-  }else{
-    streak=0;$('feedback').className='feedback bad';showExplanation(v);HannahFeedback.show($('feedback'));
-  }
-  attemptAnswers.push({question:q.a+' × '+q.b,answer:v,expected:q.ans,correct});
-  $('score').textContent=score;$('streak').textContent=streak;$('next').classList.remove('hidden');
-};
-$('next').onclick=nextQuestion;
-function nextQuestion(){i++;i>=total?finish():load()}
-function finish(){
-  $('quiz').classList.add('hidden');$('results').classList.remove('hidden');$('bar').style.width='100%';
-  const pct=Math.round(score/total*100),missed=total-score;
-  $('resultTitle').textContent=pct===100?'Perfect round! 🌟':pct>=80?'Great multiplying! 🎯':'Keep going! ✍️';
-  $('resultText').textContent='You got '+score+' out of '+total+' correct ('+pct+'%).';
-  $('carelessSummary').textContent=missed===0?'You checked all ten carefully!':'You reviewed '+missed+' question'+(missed===1?'':'s')+'. Use the steps you learned in another round.';
-  pendingResult={
-    game:'advanced-multiplication',skill:'2digit_by_1digit',mode:'maths_round',
-    score,total,answers:attemptAnswers,session_label:'2-digit × 1-digit multiplication',
-    source_version:'2026-09-23'
-  };
-  saveRound();
-}
-async function saveRound(){
-  if(!pendingResult||saveInProgress)return;
-  saveInProgress=true;
-  $('retrySave').classList.add('hidden');
-  $('saveStatus').textContent='Saving your result…';
-  const result=await HannahProgress.recordAttempt(pendingResult);
-  saveInProgress=false;
-  if(result.ok){
-    pendingResult=null;
-    $('saveStatus').textContent='✅ Saved to Parent Dashboard.';
-  }else if(result.skipped){
-    pendingResult=null;
-    $('saveStatus').textContent='Parent Test Mode is on. This result was not recorded.';
-  }else{
-    $('saveStatus').textContent='Result could not be saved. Check your connection and try again.';
-    $('retrySave').classList.remove('hidden');
-  }
-}
-
+$('form').onsubmit=e=>{e.preventDefault();if(answered)return;const raw=$('input').value.trim();let correct;
+ if(q.kind==='fractions'){const m=raw.match(/^(\d+)\s*\/\s*(\d+)$/);if(!m||Number(m[2])===0){$('feedback').textContent='Enter a fraction such as 3/4, with a bottom number greater than 0.';return}correct=Number(m[1])*q.d===q.n*Number(m[2])}else{if(!/^\d+$/.test(raw)){$('feedback').textContent='Enter a whole number first.';return}correct=Number(raw)===q.ans}
+ answered=true;$('input').blur();$('input').disabled=true;if(correct){score++;streak++;$('feedback').className='feedback good';$('feedback').textContent='✅ Correct! Great working!'}else{streak=0;$('feedback').className='feedback bad';$('feedback').textContent=explanation(q,raw);HannahFeedback.show($('feedback'))}
+ attemptAnswers.push({game:q.kind,question:q.prompt,answer:raw,expected:q.ans,correct});$('score').textContent=score;$('streak').textContent=streak;$('next').classList.remove('hidden')};
+$('next').onclick=()=>{i++;i>=total?finish():load()};
+function finish(){$('quiz').classList.add('hidden');$('results').classList.remove('hidden');$('bar').style.width='100%';$('resultTitle').textContent=score===total?'Daily superstar! 🌟':'Daily quest complete! 🌈';$('resultText').textContent=score+' out of '+total+' correct on '+questDate+'.';$('carelessSummary').textContent=['addition-subtraction','advanced-multiplication','division','fractions'].map(kind=>kind.replaceAll('-',' ') + ': '+attemptAnswers.filter(a=>a.game===kind&&a.correct).length+'/3').join(' · ');pendingResult=['addition-subtraction','advanced-multiplication','division','fractions'].map(game=>{const answers=attemptAnswers.filter(a=>a.game===game);return{game,skill:'daily_mix',mode:'practice',score:answers.filter(a=>a.correct).length,total:3,answers,session_label:'Daily Quest · '+questDate,source_version:'2026-09-30'}});saveRound()}
+async function saveRound(){if(!pendingResult||saveInProgress)return;saveInProgress=true;$('retrySave').classList.add('hidden');$('saveStatus').textContent='Saving your result…';const failed=[];let skipped=false;for(const row of pendingResult){const r=await HannahProgress.recordAttempt(row);if(r.skipped)skipped=true;else if(!r.ok)failed.push(row)}pendingResult=failed.length?failed:null;saveInProgress=false;$('saveStatus').textContent=failed.length?'Some results could not be saved. Tap Retry saving.':skipped?'Parent Test Mode is on. Results were not recorded.':'✅ Saved to Parent Dashboard.';$('retrySave').classList.toggle('hidden',!failed.length)}
 /* Stylus / pointer drawing canvas */
 const canvas=$('workCanvas'),ctx=canvas.getContext('2d');
 let drawing=false,last=null,tool='pen',activePointerId=null;
