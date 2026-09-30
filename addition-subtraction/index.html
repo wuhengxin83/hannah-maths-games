@@ -33,7 +33,7 @@
     #workCanvas{height:320px}
   }
 </style>
-<script src="../feedback.js?v=20260930"></script></head>
+<script src="../feedback.js?v=20260930b"></script></head>
 <body>
 <main class="wrap">
 <header>
@@ -225,7 +225,7 @@ $('form').onsubmit=e=>{
   }else{
     streak=0;errorType=classifyError(v);errorTypes[errorType]++;
     $('feedback').className='feedback bad';
-    showExplanation(v,errorType);HannahFeedback.show($('feedback'));
+    showExplanation(v,errorType);HannahFeedback.showWorking(q,'arithmetic');
   }
   attemptAnswers.push({question:q.a+' '+q.op+' '+q.b,answer:v,expected:q.ans,correct,error_type:errorType});
   $('score').textContent=score;$('streak').textContent=streak;$('next').classList.remove('hidden');
