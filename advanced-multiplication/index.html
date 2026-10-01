@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Advanced Times Tables · Hannah's Maths Quest</title>
 <link rel="stylesheet" href="../styles.css">
-<script src="../progress.js"></script>
+<script src="../progress.js?v=20261001"></script>
 <style>
   .quiz-layout{display:grid;grid-template-columns:minmax(260px,.82fr) minmax(340px,1.18fr);gap:16px;align-items:start}
   .question-card{background:#faf9ff;border-radius:20px;padding:18px;position:sticky;top:12px}
@@ -110,12 +110,7 @@
   </div>
 </section>
 
-<section class="card" style="margin-top:14px">
-  <div class="row" style="justify-content:space-between">
-    <div><b>Reset game</b><div class="muted">Safely restart the current session.</div></div>
-    <button class="btn red" id="reset">Reset</button>
-  </div>
-</section>
+
 
 <script>
 const $=id=>document.getElementById(id);
@@ -125,7 +120,7 @@ $('start').onclick=startQuiz;
 $('back').onclick=()=>{$('panel').classList.add('hidden');$('home').classList.remove('hidden')};
 $('again').onclick=startQuiz;
 $('retrySave').onclick=saveRound;
-$('reset').onclick=()=>location.reload();
+
 
 function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min}
 function makeQ(){
