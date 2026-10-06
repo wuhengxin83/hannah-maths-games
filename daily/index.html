@@ -46,8 +46,9 @@
 
 <section id="home" class="card" style="text-align:center">
   <h2>Ready for today’s adventure?</h2>
-  <p>12 questions: 3 addition/subtraction, 3 multiplication, 3 division and 3 fractions. A fresh set each Singapore day. No timer.</p>
+  <p>12 questions: 3 addition/subtraction, 3 multiplication, 3 division and 3 fractions. Primary 3 working: larger numbers, written multiplication and division, and fractions with different denominators. Get the first two in a topic right to unlock a challenge! A fresh set each Singapore day. Want more practice? Start a new set with 12 fresh questions. No timer.</p>
   <button class="btn primary" id="start">Start Daily Quest</button>
+  <button class="btn secondary" id="newPracticeHome" type="button">✨ New Practice Set</button>
 </section>
 
 <section id="panel" class="card hidden">
@@ -106,7 +107,10 @@
     <div id="carelessSummary" class="review"></div>
     <p id="saveStatus" role="status" aria-live="polite"></p>
     <button class="btn secondary hidden" id="retrySave" type="button">Retry saving</button>
-    <button class="btn primary" id="again" style="margin-top:15px">Replay Today’s Quest</button>
+    <div class="row" style="justify-content:center;margin-top:15px">
+      <button class="btn primary" id="newPractice" type="button">✨ New Practice Set</button>
+      <button class="btn secondary" id="again" type="button">Replay This Set</button>
+    </div>
   </div>
 </section>
 
@@ -114,33 +118,50 @@
 
 <script>
 const $=id=>document.getElementById(id);
-let i=0,total=12,score=0,streak=0,answered=false,q,attemptAnswers=[],round=[],pendingResult=null,saveInProgress=false,questDate,roundId;
-$('start').onclick=startQuiz;$('again').onclick=startQuiz;$('retrySave').onclick=saveRound;
+let i=0,total=12,score=0,streak=0,answered=false,q,attemptAnswers=[],round=[],pendingResult=null,saveInProgress=false,questDate,roundId,roundSeed,practiceNumber=0,sessionLabel;
+$('start').onclick=()=>startQuiz('daily');$('again').onclick=()=>startQuiz('replay');$('newPractice').onclick=$('newPracticeHome').onclick=()=>startQuiz('fresh');$('retrySave').onclick=saveRound;
 $('back').onclick=()=>{$('panel').classList.add('hidden');$('home').classList.remove('hidden')};
 function dayKey(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Singapore',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
-function dailyQuestions(date){
- let seed=2166136261;for(const c of date)seed=Math.imul(seed^c.charCodeAt(0),16777619);
+function dailyQuestions(date,challenge=false){
+ let seed=2166136261;for(const c of date+'|p3-v2')seed=Math.imul(seed^c.charCodeAt(0),16777619);
  const rand=(a,b)=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return a+Math.floor(seed/4294967296*(b-a+1))};
+ const gcd=(a,b)=>b?gcd(b,a%b):a;
  const out=[];
  for(let n=0;n<3;n++){
- const op=n===1?'−':'+',a=rand(n===2?1000:100,n===2?6500:899),b=rand(10,Math.min(a,9999-a));
+ const op=n===1?'−':'+',a=rand(1000,op==='+'?6500:9999),b=rand(100,op==='+'?Math.min(2999,9999-a):a-100);
  out.push({kind:'addition-subtraction',prompt:`${a} ${op} ${b}`,ans:op==='+'?a+b:a-b,a,b,op});
- const m=rand(n===0?2:12,n===0?12:99),k=rand(2,9);out.push({kind:'advanced-multiplication',prompt:`${m} × ${k}`,ans:m*k,a:m,b:k});
- const divisor=rand(2,12),quotient=rand(2,n===2?20:12);out.push({kind:'division',prompt:`${divisor*quotient} ÷ ${divisor}`,ans:quotient,a:divisor*quotient,b:divisor});
- const d=[4,6,8,10,12][rand(0,4)],x=rand(1,d-2),y=rand(1,d-x),fop=n===1?'−':'+';
- const top=fop==='+'?x+y:Math.max(x,y)-Math.min(x,y);
- const aa=fop==='+'?x:Math.max(x,y),bb=fop==='+'?y:Math.min(x,y);
- const gcd=(a,b)=>b?gcd(b,a%b):a,g=gcd(top,d);
- out.push({kind:'fractions',prompt:`${aa}/${d} ${fop} ${bb}/${d}`,ans:`${top/g}/${d/g}`,n:top,d,a:aa,b:bb,op:fop});
+ const m=rand(challenge?100:24,challenge?299:99),k=rand(challenge?6:3,9);
+ out.push({kind:'advanced-multiplication',prompt:`${m} × ${k}`,ans:m*k,a:m,b:k});
+ const divisor=rand(3,9),quotient=rand(challenge?50:21,challenge?99:69);
+ out.push({kind:'division',prompt:`${divisor*quotient} ÷ ${divisor}`,ans:quotient,a:divisor*quotient,b:divisor});
+ const pairs=challenge?[[3,4],[4,6],[6,8]]:[[2,4],[2,6],[3,6],[2,8],[4,8],[2,10],[5,10],[3,9],[3,12],[4,12],[6,12]];
+ let [d1,d2]=pairs[rand(0,pairs.length-1)],n1,n2,c=d1*d2/gcd(d1,d2),aa,bb;
+ const fop=n===1?'−':'+';
+ do{n1=rand(1,d1-1);n2=rand(1,d2-1);aa=n1*(c/d1);bb=n2*(c/d2)}while(fop==='+'?aa+bb>c:aa===bb);
+ if(fop==='−'&&aa<bb){[n1,n2]=[n2,n1];[d1,d2]=[d2,d1];[aa,bb]=[bb,aa]}
+ const top=fop==='+'?aa+bb:aa-bb,g=gcd(top,c);
+ out.push({kind:'fractions',prompt:`${n1}/${d1} ${fop} ${n2}/${d2}`,ans:`${top/g}/${c/g}`,n:top,d:c,c,a:aa,b:bb,n1,d1,n2,d2,op:fop});
  }
  return out;
 }
-function startQuiz(){roundId=crypto.randomUUID();questDate=dayKey();round=dailyQuestions(questDate);i=score=streak=0;attemptAnswers=[];
- $('home').classList.add('hidden');$('panel').classList.remove('hidden');$('results').classList.add('hidden');$('quiz').classList.remove('hidden');$('score').textContent='0';$('streak').textContent='0';load();requestAnimationFrame(resizeCanvas)}
-function load(){q=round[i];answered=false;$('question').textContent=q.prompt+' = ?';$('question').style.fontSize='clamp(1.8rem,5vw,3rem)';$('modeName').textContent=questDate+' · '+({'addition-subtraction':'Addition & Subtraction','advanced-multiplication':'Multiplication',division:'Division',fractions:'Fractions'}[q.kind]);$('input').blur();$('input').value='';$('input').disabled=false;$('input').inputMode=q.kind==='fractions'?'text':'numeric';$('input').placeholder=q.kind==='fractions'?'e.g. 3/4':'Final answer';$('input').setAttribute('aria-label',q.kind==='fractions'?'Fraction answer, for example 3/4':'Final answer');$('feedback').className='feedback';$('feedback').textContent=q.kind==='fractions'?'Type top/bottom, e.g. 3/4. Equivalent fractions are accepted.':'';$('next').classList.add('hidden');$('counter').textContent=(i+1)+'/'+total;$('bar').style.width=i/total*100+'%';clearWork()}
+function startQuiz(mode='daily'){
+ const previousDate=questDate,previousPrompts=new Set(round.map(item=>item.prompt));
+ questDate=dayKey();roundId=crypto.randomUUID();
+ if(mode==='fresh'){
+  practiceNumber=previousDate===questDate?practiceNumber+1:1;
+  let candidate;
+  do{roundSeed=questDate+'|practice|'+crypto.randomUUID();candidate=dailyQuestions(roundSeed)}while(new Set(candidate.map(item=>item.prompt)).size!==total||candidate.some(item=>previousPrompts.has(item.prompt)));
+  round=candidate;sessionLabel='Extra Practice '+practiceNumber+' · '+questDate;
+ }else if(mode!=='replay'||!roundSeed||previousDate!==questDate){
+  roundSeed=questDate;round=dailyQuestions(roundSeed);sessionLabel='Daily Quest · '+questDate;
+ }else round=dailyQuestions(roundSeed);
+ i=score=streak=0;attemptAnswers=[];
+ $('home').classList.add('hidden');$('panel').classList.remove('hidden');$('results').classList.add('hidden');$('quiz').classList.remove('hidden');$('score').textContent='0';$('streak').textContent='0';load();requestAnimationFrame(resizeCanvas)
+}
+function load(){q=round[i];if(i>=8&&attemptAnswers.filter(a=>a.game===q.kind).every(a=>a.correct)){q=round[i]=dailyQuestions(roundSeed,true)[i];}answered=false;$('question').textContent=q.prompt+' = ?';$('question').style.fontSize='clamp(1.8rem,5vw,3rem)';$('modeName').textContent=sessionLabel+' · '+({'addition-subtraction':'Addition & Subtraction','advanced-multiplication':'Multiplication',division:'Division',fractions:'Fractions'}[q.kind]);$('input').blur();$('input').value='';$('input').disabled=false;$('input').inputMode=q.kind==='fractions'?'text':'numeric';$('input').placeholder=q.kind==='fractions'?'e.g. 3/4':'Final answer';$('input').setAttribute('aria-label',q.kind==='fractions'?'Fraction answer, for example 3/4':'Final answer');$('feedback').className='feedback';$('feedback').textContent=q.kind==='fractions'?'Type top/bottom, e.g. 3/4. Equivalent fractions are accepted.':'';$('next').classList.add('hidden');$('counter').textContent=(i+1)+'/'+total;$('bar').style.width=i/total*100+'%';clearWork()}
 function explanation(q,v){
  const intro='You entered '+v+'. The correct answer is '+q.ans+'.\n';
- if(q.kind==='fractions')return intro+'The denominators match, so '+(q.op==='+'?'add':'subtract')+' the numerators: '+q.a+' '+q.op+' '+q.b+' = '+q.n+'. Keep denominator '+q.d+'.\nThis gives '+q.n+'/'+q.d+'. Simplify to '+q.ans+'.';
+ if(q.kind==='fractions')return intro+'Make the denominators match: '+q.n1+'/'+q.d1+' = '+q.a+'/'+q.c+' and '+q.n2+'/'+q.d2+' = '+q.b+'/'+q.c+'.\n'+q.a+' '+q.op+' '+q.b+' = '+q.n+'. Keep denominator '+q.c+'.\nThis gives '+q.n+'/'+q.c+'. Simplify to '+q.ans+'.';
  if(q.kind==='division')return intro+'Think: '+q.b+' × ? = '+q.a+'.\n'+q.b+' × '+q.ans+' = '+q.a+', so there are '+q.ans+' groups of '+q.b+'.';
  if(q.kind==='advanced-multiplication'){const tens=Math.floor(q.a/10)*10,ones=q.a%10;return intro+'Split '+q.a+' into '+tens+' + '+ones+'.\n'+tens+' × '+q.b+' = '+tens*q.b+'.\n'+ones+' × '+q.b+' = '+ones*q.b+'.\nAdd the two products: '+tens*q.b+' + '+ones*q.b+' = '+q.ans+'.'}
  let digits=String(q.a).split('').reverse().map(Number),carry=0,steps=[];
@@ -149,14 +170,14 @@ function explanation(q,v){
 }
 $('form').onsubmit=e=>{e.preventDefault();if(answered)return;const raw=$('input').value.trim();let correct;
  if(q.kind==='fractions'){const m=raw.match(/^(\d+)\s*\/\s*(\d+)$/);if(!m||Number(m[2])===0){$('feedback').textContent='Enter a fraction such as 3/4, with a bottom number greater than 0.';return}correct=Number(m[1])*q.d===q.n*Number(m[2])}else{if(!/^\d+$/.test(raw)){$('feedback').textContent='Enter a whole number first.';return}correct=Number(raw)===q.ans}
- answered=true;$('input').blur();$('input').disabled=true;if(correct){score++;streak++;$('feedback').className='feedback good';$('feedback').textContent='✅ Correct! Great working!'}else{streak=0;$('feedback').className='feedback bad';$('feedback').textContent=explanation(q,raw);HannahFeedback.showWorking(q,q.kind==='advanced-multiplication'?'multiplication':q.kind==='addition-subtraction'?'arithmetic':q.kind,q.kind==='fractions'?'same':undefined)}
+ answered=true;$('input').blur();$('input').disabled=true;if(correct){score++;streak++;$('feedback').className='feedback good';$('feedback').textContent='✅ Correct! Great working!'}else{streak=0;$('feedback').className='feedback bad';$('feedback').textContent=explanation(q,raw);HannahFeedback.showWorking(q.kind==='fractions'?{...q,kind:'unlike-fractions'}:q,q.kind==='advanced-multiplication'?'multiplication':q.kind==='addition-subtraction'?'arithmetic':q.kind,q.kind==='fractions'?'unlike':undefined)}
  attemptAnswers.push({game:q.kind,question:q.prompt,answer:raw,expected:q.ans,correct});$('score').textContent=score;$('streak').textContent=streak;$('next').classList.remove('hidden');if(i===total-1)finish()};
 $('next').onclick=()=>{i++;i>=total?finish():load()};
-function finish(){$('quiz').classList.add('hidden');$('results').classList.remove('hidden');$('bar').style.width='100%';$('resultTitle').textContent=score===total?'Daily superstar! 🌟':'Daily quest complete! 🌈';$('resultText').textContent=score+' out of '+total+' correct on '+questDate+'.';$('carelessSummary').textContent=['addition-subtraction','advanced-multiplication','division','fractions'].map(kind=>kind.replaceAll('-',' ') + ': '+attemptAnswers.filter(a=>a.game===kind&&a.correct).length+'/3').join(' · ');pendingResult={id:roundId,game:'daily',skill:'mixed_daily',mode:'maths_round',score,total,answers:attemptAnswers,session_label:'Daily Quest · '+questDate,source_version:'2026-10-01'};saveRound()}
+function finish(){$('quiz').classList.add('hidden');$('results').classList.remove('hidden');$('bar').style.width='100%';$('resultTitle').textContent=score===total?'Daily superstar! 🌟':'Daily quest complete! 🌈';$('resultText').textContent=score+' out of '+total+' correct · '+sessionLabel+'.';$('carelessSummary').textContent=['addition-subtraction','advanced-multiplication','division','fractions'].map(kind=>kind.replaceAll('-',' ') + ': '+attemptAnswers.filter(a=>a.game===kind&&a.correct).length+'/3').join(' · ');pendingResult={id:roundId,game:'daily',skill:'mixed_daily',mode:'maths_round',score,total,answers:attemptAnswers,session_label:sessionLabel,source_version:'2026-10-06'};saveRound()}
 async function saveRound(){
  if(!pendingResult||saveInProgress)return;
- const row=pendingResult;saveInProgress=true;$('retrySave').classList.add('hidden');$('again').disabled=true;$('saveStatus').textContent='Saving your result…';
- const result=await HannahProgress.recordAttempt(row);saveInProgress=false;$('again').disabled=false;
+ const row=pendingResult;saveInProgress=true;$('retrySave').classList.add('hidden');$('again').disabled=$('newPractice').disabled=true;$('saveStatus').textContent='Saving your result…';
+ const result=await HannahProgress.recordAttempt(row);saveInProgress=false;$('again').disabled=$('newPractice').disabled=false;
  if(result.ok){pendingResult=null;$('saveStatus').textContent='✅ Saved to Parent Dashboard.'}
  else if(result.skipped){pendingResult=null;$('saveStatus').textContent='Parent Test Mode is on. This result was not recorded.'}
  else{$('saveStatus').textContent='Saved on this device. We’ll retry when you reconnect. You can also tap Retry saving.';$('retrySave').classList.remove('hidden')}
@@ -230,3 +251,4 @@ requestAnimationFrame(resizeCanvas);
 </main>
 </body>
 </html>
+
